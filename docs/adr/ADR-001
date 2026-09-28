@@ -1,0 +1,56 @@
+# Context
+The Service Status and Incident Framework needs to distinguish between users who manage services and ordinary users who view services or subscribe to notifications.
+
+Several system functions must be restricted to authorized users. For example, registering services, configuring health checks, manually running health checks, and creating or updating incidents require authorization. Regular users should be able to view service statuses and subscribe to services without having access to service-management functions.
+
+The project requirements specifically call for an authorization distinction between service owners and regular users/subscribers. The project also needs to remain manageable within the scope and schedule of the course project. A more complicated role and permission system would add implementation and testing requirements that are not necessary for the current requirements
+
+# Decision
+We will use a simple authorization model with two user categories: service owners and regular users/subscribers.
+
+Service owners will be authorized to perform management operations such as registering services, configuring and manually running health checks, and creating and updating incidents.
+
+Regular users/subscribers will be able to view the status page and subscribe or unsubscribe from services, but they will not be authorized to perform service-management or incident-management operations.
+
+We will implement authorization using Django's built-in authentication and authorization capabilities rather than creating a custom permission system.
+
+# Alternatives Considered
+Alternative 1: Use a More Detailed Role-Based Access Control System
+
+We considered creating several roles with separate permissions, such as administrator, service owner, incident manager, and subscriber.
+
+We did not choose this approach because the current requirements only identify a need to distinguish service owners from regular users/subscribers. Adding additional roles would increase implementation, testing, and maintenance work without addressing a current project requirement.
+
+Alternative 2: Give Every Authenticated User the Same Permissions
+
+We considered allowing every logged-in user to perform service and incident management operations.
+
+We did not choose this approach because the requirements explicitly restrict management operations to authorized users. Allowing all authenticated users to create or update incidents or manually run health checks would not satisfy the authorization requirements.
+
+Alternative 3: Create a Custom Authorization System
+
+We considered implementing our own authorization logic instead of using Django's built-in authentication and authorization features.
+
+We did not choose this approach because it would require additional code for managing users, permissions, and authorization checks. Django already provides authentication and authorization functionality that can support the two-category model without creating a separate authorization framework
+
+# Consequences
+Positive Consequences
+
+- The authorization model directly matches the current project requirements.
+- Service-management and incident-management operations can be restricted to service owners.
+- Regular users can access the public-facing functionality without receiving management permissions.
+- The team avoids implementing unnecessary roles and permissions.
+- Using Django's built-in authentication and authorization reduces the amount of custom security-related code the team must maintain.
+
+Negative Consequences
+
+- The two-category model may become limiting if the project later requires different levels of administrative access.
+- Some authorization rules will need to be maintained consistently across views and other application entry points.
+- Adding a new type of user or permission later may require changes to the authorization design.
+- The team must correctly configure and test authorization checks; using Django's built-in system does not eliminate the need for testing.
+- A simple authorization model may not support complex organizational permissions if the application is expanded beyond the current project scope
+
+# Requirements Addressed
+This decision supports the requirement that unauthorized users must be prevented from creating, updating, or closing incidents and from manually running health checks.
+
+It also supports the project's distinction between service owners and regular users/subscribers
