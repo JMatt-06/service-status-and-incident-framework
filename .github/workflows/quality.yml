@@ -14,27 +14,34 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: ${{ hashFiles('**/*.py') != '' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: ${{ hashFiles('**/*.py') != '' }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-django pytest-cov ruff
 
       - name: Run automated tests
+        if: ${{ hashFiles('**/*.py') != '' }}
         run: python -m pytest
 
       - name: Run Ruff linting
+        if: ${{ hashFiles('**/*.py') != '' }}
         run: ruff check .
 
       - name: Check code formatting
+        if: ${{ hashFiles('**/*.py') != '' }}
         run: ruff format --check .
 
       - name: Run Django system checks
+        if: ${{ hashFiles('manage.py') != '' }}
         run: python manage.py check
 
       - name: Check database migrations
+        if: ${{ hashFiles('manage.py') != '' }}
         run: python manage.py makemigrations --check --dry-run
