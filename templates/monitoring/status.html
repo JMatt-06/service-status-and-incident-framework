@@ -11,13 +11,16 @@
         {% if user.is_authenticated %}
             <p>Signed in as {{ user.username }}. <a href="{% url 'logout' %}">Sign out</a></p>
         {% else %}
-            <p><a href="{% url 'login' %}">Sign in</a></p>
+            <p><a href="{% url 'login' %}">Sign in</a> or <a href="{% url 'account-create' %}">Create an account</a></p>
         {% endif %}
         {% for service in services %}
             <article>
                 <h2>{{ service.name }}</h2>
                 <p>{{ service.description }}</p>
                 <p>Status: {{ service.get_status_display }}</p>
+                {% if user.is_authenticated and user == service.owner or user.is_superuser %}
+                    <p><a href="{% url 'health-check-configure' service.id %}">Configure health check</a></p>
+                {% endif %}
                 {% if user.is_authenticated %}
                     <form method="post" action="{% url 'subscribe' service.id %}">
                         {% csrf_token %}
@@ -28,6 +31,9 @@
         {% empty %}
             <p>No services have been registered.</p>
         {% endfor %}
+        {% if can_register_service %}
+            <p><a href="{% url 'service-create' %}">Register a service</a></p>
+        {% endif %}
         <h2>Active incidents</h2>
         {% for incident in active_incidents %}
             <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>

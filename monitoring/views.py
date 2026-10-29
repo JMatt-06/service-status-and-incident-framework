@@ -1,8 +1,10 @@
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import HealthCheckForm, IncidentForm, ServiceForm
+from .forms import AccountCreationForm, HealthCheckForm, IncidentForm, ServiceForm
 from .models import Incident, Service, Subscription
 from .permissions import can_manage_service, is_service_owner
 
@@ -18,8 +20,27 @@ def status_page(request):
     return render(
         request,
         "monitoring/status.html",
-        {"services": Service.objects.all(), "active_incidents": active_incidents},
+        {
+            "services": Service.objects.all(),
+            "active_incidents": active_incidents,
+            "can_register_service": is_service_owner(request.user),
+        },
     )
+
+
+def account_create(request):
+    if request.user.is_authenticated:
+        return redirect("status")
+    if request.method == "POST":
+        form = AccountCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.groups.add(Group.objects.get(name="Service Owners"))
+            login(request, user)
+            return redirect("status")
+    else:
+        form = AccountCreationForm()
+    return render(request, "registration/account_create.html", {"form": form})
 
 
 @login_required
