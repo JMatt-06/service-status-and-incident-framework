@@ -3,7 +3,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import HealthCheckForm, IncidentForm, ServiceForm
-from .models import HealthCheckResult, Incident, Service, Subscription
+from .models import Incident, Service, Subscription
 from .permissions import can_manage_service, is_service_owner
 
 
@@ -12,8 +12,14 @@ def health(request):
 
 
 def status_page(request):
-    active_incidents = Incident.objects.exclude(status=Incident.Status.CLOSED).prefetch_related("affected_services")
-    return render(request, "monitoring/status.html", {"services": Service.objects.all(), "active_incidents": active_incidents})
+    active_incidents = Incident.objects.exclude(
+        status=Incident.Status.CLOSED
+    ).prefetch_related("affected_services")
+    return render(
+        request,
+        "monitoring/status.html",
+        {"services": Service.objects.all(), "active_incidents": active_incidents},
+    )
 
 
 @login_required
@@ -28,7 +34,9 @@ def service_create(request):
             return redirect("status")
     else:
         form = ServiceForm()
-    return render(request, "monitoring/form.html", {"form": form, "title": "Register service"})
+    return render(
+        request, "monitoring/form.html", {"form": form, "title": "Register service"}
+    )
 
 
 @login_required
@@ -47,7 +55,11 @@ def health_check_configure(request, service_id):
             return redirect("status")
     else:
         form = HealthCheckForm(instance=health_check)
-    return render(request, "monitoring/form.html", {"form": form, "title": f"Configure {service.name}"})
+    return render(
+        request,
+        "monitoring/form.html",
+        {"form": form, "title": f"Configure {service.name}"},
+    )
 
 
 @login_required
@@ -63,14 +75,19 @@ def incident_create(request):
             return redirect("status")
     else:
         form = IncidentForm()
-    return render(request, "monitoring/form.html", {"form": form, "title": "Create incident"})
+    return render(
+        request, "monitoring/form.html", {"form": form, "title": "Create incident"}
+    )
 
 
 @login_required
 @user_passes_test(is_service_owner)
 def incident_update(request, incident_id):
     incident = get_object_or_404(Incident, pk=incident_id)
-    if not request.user.is_superuser and not incident.affected_services.filter(owner=request.user).exists():
+    if (
+        not request.user.is_superuser
+        and not incident.affected_services.filter(owner=request.user).exists()
+    ):
         return HttpResponseForbidden("You do not own an affected service.")
     if request.method == "POST":
         form = IncidentForm(request.POST, instance=incident)
@@ -79,7 +96,11 @@ def incident_update(request, incident_id):
             return redirect("status")
     else:
         form = IncidentForm(instance=incident)
-    return render(request, "monitoring/form.html", {"form": form, "title": f"Update {incident.title}"})
+    return render(
+        request,
+        "monitoring/form.html",
+        {"form": form, "title": f"Update {incident.title}"},
+    )
 
 
 @login_required

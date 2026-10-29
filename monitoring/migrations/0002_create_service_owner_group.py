@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.db import migrations
 
 
@@ -12,5 +14,7 @@ def remove_service_owner_group(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("monitoring", "0001_initial")]
-    operations = [migrations.RunPython(create_service_owner_group, remove_service_owner_group)]
+    dependencies: ClassVar[list[tuple[str, str]]] = [("monitoring", "0001_initial")]
+    operations: ClassVar[list[object]] = [
+        migrations.RunPython(create_service_owner_group, remove_service_owner_group)
+    ]
