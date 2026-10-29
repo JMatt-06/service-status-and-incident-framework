@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path("", views.status_page, name="status"),
     path("health/", views.health, name="health"),
+    path("accounts/create/", views.account_create, name="account-create"),
     path("services/new/", views.service_create, name="service-create"),
     path(
         "services/<int:service_id>/health-check/",
