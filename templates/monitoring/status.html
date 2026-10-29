@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Service Status</title>
+</head>
+<body>
+    <main>
+        <h1>Service Status</h1>
+        {% if user.is_authenticated %}
+            <p>Signed in as {{ user.username }}. <a href="{% url 'logout' %}">Sign out</a></p>
+        {% else %}
+            <p><a href="{% url 'login' %}">Sign in</a></p>
+        {% endif %}
+        {% for service in services %}
+            <article>
+                <h2>{{ service.name }}</h2>
+                <p>{{ service.description }}</p>
+                <p>Status: {{ service.get_status_display }}</p>
+                {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'subscribe' service.id %}">
+                        {% csrf_token %}
+                        <button type="submit">Subscribe</button>
+                    </form>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p>No services have been registered.</p>
+        {% endfor %}
+        <h2>Active incidents</h2>
+        {% for incident in active_incidents %}
+            <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>
+        {% empty %}
+            <p>No active incidents.</p>
+        {% endfor %}
+    </main>
+</body>
+</html>
