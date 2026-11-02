@@ -5,6 +5,11 @@ from . import views
 urlpatterns = [
     path("", views.status_page, name="status"),
     path("health/", views.health, name="health"),
+    path(
+        "services/<slug:service_slug>/history/",
+        views.health_history,
+        name="health-history",
+    ),
     path("accounts/create/", views.account_create, name="account-create"),
     path("services/new/", views.service_create, name="service-create"),
     path(

@@ -1,54 +1,105 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Service Status</title>
-</head>
-<body>
-    <main>
-        <h1>Service Status</h1>
-        {% if user.is_authenticated %}
-            <p>Signed in as {{ user.username }}. <a href="{% url 'logout' %}">Sign out</a></p>
-        {% else %}
-            <p><a href="{% url 'login' %}">Sign in</a> or <a href="{% url 'account-create' %}">Create an account</a></p>
-        {% endif %}
+{% extends "monitoring/base.html" %}
+
+{% block content %}
+    <main class="page">
+        <section class="hero">
+            <div>
+                <div class="eyebrow">Live service observatory</div>
+                <h1>Find Your Service Here</h1>
+                <p class="hero-copy">A clear view of current service health, recent checks, and incidents that need attention.</p>
+            </div>
+            <div class="hero-date" data-local-date>Today</div>
+        </section>
+
+        <section class="summary-grid" aria-label="Status summary">
+            <div class="summary-card">
+                <span class="summary-label">Tracked services</span>
+                <strong class="summary-value">{{ services|length }}</strong>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Open incidents</span>
+                <strong class="summary-value">{{ active_incidents|length }}</strong>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Last updated</span>
+                <strong class="summary-value">Now</strong>
+            </div>
+        </section>
+
+        <section aria-labelledby="services-heading">
+            <div class="section-heading">
+                <h2 id="services-heading">Services</h2>
+                <div class="filters" aria-label="Filter services">
+                    <button class="filter-button is-active" type="button" data-filter="all">All</button>
+                    <button class="filter-button" type="button" data-filter="operational">Operational</button>
+                    <button class="filter-button" type="button" data-filter="degraded">Degraded</button>
+                    <button class="filter-button" type="button" data-filter="unavailable">Unavailable</button>
+                </div>
+            </div>
         {% for service in services %}
-            <article>
-                <h2>{{ service.name }}</h2>
-                <p>{{ service.description }}</p>
-                <p>Status: {{ service.get_status_display }}</p>
+            <article class="service-card" data-service-card data-status="{{ service.status }}">
+                <div class="card-heading">
+                    <h3>{{ service.name }}</h3>
+                    <span class="status-pill {{ service.status }}">{{ service.get_status_display }}</span>
+                </div>
+                <p class="service-description">{{ service.description|default:"No description provided." }}</p>
+                {% if service.health_check %}
+                    {% with latest_result=service.health_check.recent_results.0 %}
+                        {% if latest_result %}
+                            <p class="check-meta">
+                                Latest check: <strong>{% if latest_result.succeeded %}Passed{% else %}Failed{% endif %}</strong>
+                                {% if latest_result.response_time_ms %}
+                                    in {{ latest_result.response_time_ms }} ms
+                                {% endif %}
+                                <br>{{ latest_result.checked_at }}
+                            </p>
+                        {% else %}
+                            <p class="check-meta">Health check configured, but no result is recorded yet.</p>
+                        {% endif %}
+                    {% endwith %}
+                    <div class="card-actions">
+                        <a class="text-link" href="{% url 'health-history' service.slug %}">View history</a>
+                    </div>
+                {% else %}
+                    <p class="check-meta">No health check configured.</p>
+                    <div class="card-actions">
+                        <span class="text-link">Monitoring not active</span>
+                    </div>
+                {% endif %}
                 {% if user.is_authenticated and user == service.owner or user.is_superuser %}
-                    <p><a href="{% url 'health-check-configure' service.id %}">Configure health check</a></p>
+                    <div class="card-actions">
+                        <a class="text-link" href="{% url 'health-check-configure' service.id %}">Configure health check</a>
                     {% if service.health_check %}
                         <form method="post" action="{% url 'health-check-run' service.id %}">
                             {% csrf_token %}
-                            <button type="submit">Run health check</button>
+                            <button class="button" type="submit">Run check</button>
                         </form>
-                        {% if service.health_check.last_run_at %}
-                            <p>Last checked: {{ service.health_check.last_run_at }}</p>
-                        {% endif %}
                     {% endif %}
+                    </div>
                 {% endif %}
                 {% if user.is_authenticated %}
                     <form method="post" action="{% url 'subscribe' service.id %}">
                         {% csrf_token %}
-                        <button type="submit">Subscribe</button>
+                        <button class="text-link" type="submit">Subscribe to updates</button>
                     </form>
                 {% endif %}
             </article>
         {% empty %}
-            <p>No services have been registered.</p>
+            <p class="empty-state">No services have been registered.</p>
         {% endfor %}
+        </section>
         {% if can_register_service %}
-            <p><a href="{% url 'service-create' %}">Register a service</a></p>
+            <a class="management-link" href="{% url 'service-create' %}">Register a service</a>
         {% endif %}
-        <h2>Active incidents</h2>
-        {% for incident in active_incidents %}
-            <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>
-        {% empty %}
-            <p>No active incidents.</p>
-        {% endfor %}
+        <section class="incidents" aria-labelledby="incidents-heading">
+            <div class="section-heading"><h2 id="incidents-heading">Active incidents</h2></div>
+            <div class="incident-list">
+                {% for incident in active_incidents %}
+                    <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>
+                {% empty %}
+                    <p>No active incidents.</p>
+                {% endfor %}
+            </div>
+        </section>
     </main>
-</body>
-</html>
+{% endblock %}

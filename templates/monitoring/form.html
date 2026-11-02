@@ -1,15 +1,19 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>{{ title }}</title></head>
-<body>
-    <main>
-        <h1>{{ title }}</h1>
+{% extends "monitoring/base.html" %}
+
+{% block title %}{{ title }} | Signal Status{% endblock %}
+
+{% block content %}
+    <main class="page form-page">
+        <section class="form-panel form-panel-wide">
+            <div class="eyebrow">Service management</div>
+            <h1>{{ title }}</h1>
+            <p class="form-intro">Keep your service details and monitoring settings up to date.</p>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Save</button>
+            <button class="button form-submit" type="submit">Save changes</button>
         </form>
-        <a href="{% url 'status' %}">Back to status</a>
+            <a class="form-back" href="{% url 'status' %}">Back to overview</a>
+        </section>
     </main>
-</body>
-</html>
+{% endblock %}

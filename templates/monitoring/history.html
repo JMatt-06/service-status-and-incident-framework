@@ -1,0 +1,49 @@
+{% extends "monitoring/base.html" %}
+
+{% block title %}{{ service.name }} history | Signal Status{% endblock %}
+
+{% block content %}
+    <main class="page">
+        <div class="history-header">
+            <div>
+                <a class="back-link" href="{% url 'status' %}">Back to overview</a>
+                <div class="eyebrow">Service history</div>
+                <h1>{{ service.name }}</h1>
+                <p class="hero-copy">{{ service.description|default:"A record of automated health checks for this service." }}</p>
+            </div>
+            <span class="status-pill {{ service.status }}">{{ service.get_status_display }}</span>
+        </div>
+        {% if results %}
+            <div class="history-table-wrap">
+              <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Checked at</th>
+                        <th scope="col">Result</th>
+                        <th scope="col">Response time</th>
+                        <th scope="col">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                        <tr>
+                            <td>{{ result.checked_at }}</td>
+                            <td><span class="result-badge {% if result.succeeded %}result-pass{% else %}result-fail{% endif %}">{% if result.succeeded %}Passed{% else %}Failed{% endif %}</span></td>
+                            <td>
+                                {% if result.response_time_ms %}
+                                    {{ result.response_time_ms }} ms
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </td>
+                            <td>{{ result.error_message|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+              </table>
+            </div>
+        {% else %}
+            <div class="empty-state no-results">No health checks have been recorded.</div>
+        {% endif %}
+    </main>
+{% endblock %}

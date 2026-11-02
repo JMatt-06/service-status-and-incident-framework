@@ -1,11 +1,12 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group
+from django.db.models import Prefetch
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import AccountCreationForm, HealthCheckForm, IncidentForm, ServiceForm
-from .models import Incident, Service, Subscription
+from .models import HealthCheckResult, Incident, Service, Subscription
 from .permissions import can_manage_service, is_service_owner
 
 
@@ -17,14 +18,38 @@ def status_page(request):
     active_incidents = Incident.objects.exclude(
         status=Incident.Status.CLOSED
     ).prefetch_related("affected_services")
+    recent_results = HealthCheckResult.objects.order_by("-checked_at")[:1]
     return render(
         request,
         "monitoring/status.html",
         {
-            "services": Service.objects.all(),
+            "services": Service.objects.select_related("health_check").prefetch_related(
+                Prefetch(
+                    "health_check__results",
+                    queryset=recent_results,
+                    to_attr="recent_results",
+                )
+            ),
             "active_incidents": active_incidents,
             "can_register_service": is_service_owner(request.user),
         },
+    )
+
+
+def health_history(request, service_slug):
+    service = get_object_or_404(
+        Service.objects.select_related("health_check"), slug=service_slug
+    )
+    health_check = getattr(service, "health_check", None)
+    results = (
+        health_check.results.all()
+        if health_check is not None
+        else HealthCheckResult.objects.none()
+    )
+    return render(
+        request,
+        "monitoring/history.html",
+        {"service": service, "results": results},
     )
 
 
