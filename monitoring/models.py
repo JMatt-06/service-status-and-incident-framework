@@ -1,3 +1,6 @@
+import time
+import urllib.error
+import urllib.request
 from typing import ClassVar
 
 from django.conf import settings
@@ -31,6 +34,25 @@ class Service(models.Model):
     def __str__(self):
         return self.name
 
+    def update_status_from_health_check(self, result):
+        if result.succeeded:
+            self.status = self.Status.OPERATIONAL
+        else:
+            consecutive_failures = 0
+            for previous_result in self.health_check.results.all():
+                if previous_result.pk == result.pk:
+                    continue
+                if previous_result.succeeded:
+                    break
+                consecutive_failures += 1
+            consecutive_failures += 1
+            self.status = (
+                self.Status.UNAVAILABLE
+                if consecutive_failures >= self.health_check.failure_threshold
+                else self.Status.DEGRADED
+            )
+        self.save(update_fields=["status", "updated_at"])
+
 
 class HealthCheck(models.Model):
     service = models.OneToOneField(
@@ -45,6 +67,34 @@ class HealthCheck(models.Model):
 
     def __str__(self):
         return f"Health check for {self.service}"
+
+    def run(self):
+        started_at = time.monotonic()
+        succeeded = False
+        response_time_ms = None
+        error_message = ""
+        try:
+            with urllib.request.urlopen(
+                self.url, timeout=self.timeout_seconds
+            ) as response:
+                response_time_ms = round((time.monotonic() - started_at) * 1000)
+                succeeded = 200 <= response.status < 400
+                if not succeeded:
+                    error_message = f"HTTP {response.status}"
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            response_time_ms = round((time.monotonic() - started_at) * 1000)
+            error_message = str(error)
+
+        result = HealthCheckResult.objects.create(
+            health_check=self,
+            succeeded=succeeded,
+            response_time_ms=response_time_ms,
+            error_message=error_message,
+        )
+        self.last_run_at = result.checked_at
+        self.save(update_fields=["last_run_at"])
+        self.service.update_status_from_health_check(result)
+        return result
 
 
 class HealthCheckResult(models.Model):

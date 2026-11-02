@@ -20,6 +20,15 @@
                 <p>Status: {{ service.get_status_display }}</p>
                 {% if user.is_authenticated and user == service.owner or user.is_superuser %}
                     <p><a href="{% url 'health-check-configure' service.id %}">Configure health check</a></p>
+                    {% if service.health_check %}
+                        <form method="post" action="{% url 'health-check-run' service.id %}">
+                            {% csrf_token %}
+                            <button type="submit">Run health check</button>
+                        </form>
+                        {% if service.health_check.last_run_at %}
+                            <p>Last checked: {{ service.health_check.last_run_at }}</p>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
                 {% if user.is_authenticated %}
                     <form method="post" action="{% url 'subscribe' service.id %}">

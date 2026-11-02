@@ -85,6 +85,21 @@ def health_check_configure(request, service_id):
 
 @login_required
 @user_passes_test(is_service_owner)
+def health_check_run(request, service_id):
+    service = get_object_or_404(Service, pk=service_id)
+    if not can_manage_service(request.user, service):
+        return HttpResponseForbidden("You do not own this service.")
+    if request.method != "POST":
+        return HttpResponseForbidden("Health checks must be run with POST.")
+    health_check = getattr(service, "health_check", None)
+    if health_check is None:
+        return HttpResponseForbidden("Configure a health check first.")
+    health_check.run()
+    return redirect("status")
+
+
+@login_required
+@user_passes_test(is_service_owner)
 def incident_create(request):
     if request.method == "POST":
         form = IncidentForm(request.POST)
