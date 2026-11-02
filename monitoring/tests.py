@@ -170,9 +170,7 @@ class MonitoringModelTests(TestCase):
         self.assertEqual(health_check.results.count(), 1)
 
     def test_health_history_is_public_and_handles_unconfigured_service(self):
-        response = self.client.get(
-            reverse("health-history", args=[self.service.slug])
-        )
+        response = self.client.get(reverse("health-history", args=[self.service.slug]))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No health checks have been recorded.")
