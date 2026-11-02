@@ -1,9 +1,10 @@
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from unittest.mock import patch
 
-from .models import HealthCheck, Incident, Service, Subscription
+from .models import HealthCheck, HealthCheckResult, Incident, Service, Subscription
 
 
 class MonitoringModelTests(TestCase):
@@ -113,6 +114,73 @@ class MonitoringModelTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(HealthCheck.objects.filter(service=other_service).exists())
+
+    @patch("monitoring.models.urllib.request.urlopen")
+    def test_owner_can_run_health_check_and_update_status(self, urlopen):
+        response = urlopen.return_value.__enter__.return_value
+        response.status = 200
+        health_check = HealthCheck.objects.create(
+            service=self.service,
+            url="https://api.example.com/health",
+            failure_threshold=2,
+        )
+
+        self.client.login(username="owner", password="password")
+        request_time = health_check.last_run_at
+        result = self.client.post(
+            reverse("health-check-run", args=[self.service.id])
+        )
+
+        self.assertRedirects(result, reverse("status"))
+        stored_result = HealthCheckResult.objects.get(health_check=health_check)
+        self.assertTrue(stored_result.succeeded)
+        self.assertIsNotNone(stored_result.checked_at)
+        self.assertNotEqual(stored_result.checked_at, request_time)
+        self.assertEqual(
+            HealthCheck.objects.get(pk=health_check.pk).last_run_at,
+            stored_result.checked_at,
+        )
+        self.assertEqual(Service.objects.get(pk=self.service.pk).status, "operational")
+
+    @patch("monitoring.models.urllib.request.urlopen")
+    def test_failed_health_checks_degrade_then_unavailable_service(self, urlopen):
+        urlopen.side_effect = TimeoutError("health check timed out")
+        health_check = HealthCheck.objects.create(
+            service=self.service,
+            url="https://api.example.com/health",
+            failure_threshold=2,
+        )
+        self.client.login(username="owner", password="password")
+
+        self.client.post(reverse("health-check-run", args=[self.service.id]))
+        self.assertEqual(
+            Service.objects.get(pk=self.service.pk).status, Service.Status.DEGRADED
+        )
+        self.client.post(reverse("health-check-run", args=[self.service.id]))
+        self.assertEqual(
+            Service.objects.get(pk=self.service.pk).status, Service.Status.UNAVAILABLE
+        )
+        self.assertEqual(health_check.results.count(), 2)
+        self.assertTrue(health_check.results.first().error_message)
+
+    def test_service_owner_cannot_run_another_owners_health_check(self):
+        other_owner = User.objects.create_user(
+            username="other-owner", password="password"
+        )
+        other_service = Service.objects.create(
+            name="Other API", slug="other-api", owner=other_owner
+        )
+        HealthCheck.objects.create(
+            service=other_service, url="https://api.example.com/health"
+        )
+
+        self.client.login(username="owner", password="password")
+        response = self.client.post(
+            reverse("health-check-run", args=[other_service.id])
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(HealthCheckResult.objects.count(), 0)
 
     def test_owner_can_subscribe_and_unsubscribe(self):
         self.client.login(username="owner", password="password")

@@ -12,6 +12,11 @@ urlpatterns = [
         views.health_check_configure,
         name="health-check-configure",
     ),
+    path(
+        "services/<int:service_id>/health-check/run/",
+        views.health_check_run,
+        name="health-check-run",
+    ),
     path("incidents/new/", views.incident_create, name="incident-create"),
     path(
         "incidents/<int:incident_id>/edit/",
