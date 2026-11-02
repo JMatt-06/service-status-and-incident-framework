@@ -1,15 +1,19 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Create an account</title></head>
-<body>
-    <main>
-        <h1>Create an account</h1>
+{% extends "monitoring/base.html" %}
+
+{% block title %}Create an account | Signal Status{% endblock %}
+
+{% block content %}
+    <main class="page form-page">
+        <section class="form-panel">
+            <div class="eyebrow">Start monitoring</div>
+            <h1>Create an account</h1>
+            <p class="form-intro">Register as a service owner and bring your first service online.</p>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Create account</button>
+            <button class="button form-submit" type="submit">Create account</button>
         </form>
-        <p><a href="{% url 'login' %}">Already have an account? Sign in</a></p>
+            <p class="form-footer">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+        </section>
     </main>
-</body>
-</html>
+{% endblock %}

@@ -1,15 +1,20 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Sign in</title></head>
-<body>
-    <main>
-        <h1>Sign in</h1>
+{% extends "monitoring/base.html" %}
+
+{% block title %}Sign in | Signal Status{% endblock %}
+
+{% block content %}
+    <main class="page form-page">
+        <section class="form-panel">
+            <div class="eyebrow">Welcome back</div>
+            <h1>Sign in</h1>
+            <p class="form-intro">Access your services, health checks, and incident updates.</p>
         <form method="post">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
             {{ form.as_p }}
-            <button type="submit">Sign in</button>
+            <button class="button form-submit" type="submit">Sign in</button>
         </form>
-        <p><a href="{% url 'account-create' %}">Create an account</a></p>
+            <p class="form-footer">New to Signal Status? <a href="{% url 'account-create' %}">Create an account</a></p>
+        </section>
     </main>
-</body>
-</html>
+{% endblock %}

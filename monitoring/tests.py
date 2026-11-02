@@ -142,6 +142,42 @@ class MonitoringModelTests(TestCase):
         self.assertEqual(Service.objects.get(pk=self.service.pk).status, "operational")
 
     @patch("monitoring.models.urllib.request.urlopen")
+    def test_status_page_and_health_history_display_check_results(self, urlopen):
+        response = urlopen.return_value.__enter__.return_value
+        response.status = 200
+        health_check = HealthCheck.objects.create(
+            service=self.service,
+            url="https://api.example.com/health",
+        )
+        self.client.force_login(self.owner)
+
+        self.client.post(reverse("health-check-run", args=[self.service.id]))
+
+        status_response = self.client.get(reverse("status"))
+        self.assertContains(status_response, "Latest check:")
+        self.assertContains(
+            status_response, reverse("health-history", args=[self.service.slug])
+        )
+
+        history_response = self.client.get(
+            reverse("health-history", args=[self.service.slug])
+        )
+        self.assertEqual(history_response.status_code, 200)
+        self.assertContains(history_response, "Passed")
+        self.assertContains(
+            history_response, "No health checks have been recorded.", count=0
+        )
+        self.assertEqual(health_check.results.count(), 1)
+
+    def test_health_history_is_public_and_handles_unconfigured_service(self):
+        response = self.client.get(
+            reverse("health-history", args=[self.service.slug])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No health checks have been recorded.")
+
+    @patch("monitoring.models.urllib.request.urlopen")
     def test_failed_health_checks_degrade_then_unavailable_service(self, urlopen):
         urlopen.side_effect = TimeoutError("health check timed out")
         health_check = HealthCheck.objects.create(

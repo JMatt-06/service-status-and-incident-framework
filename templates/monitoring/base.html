@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a43">
+    <title>{% block title %}Signal Status{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'monitoring/site.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="site-shell">
+        <header class="topbar">
+            <a class="brand" href="{% url 'status' %}">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span>Signal Status</span>
+            </a>
+            <nav class="topnav" aria-label="Primary navigation">
+                <a href="{% url 'status' %}">Overview</a>
+                {% if user.is_authenticated %}
+                    <span class="signed-in">{{ user.username }}</span>
+                    <form class="nav-form" method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="nav-action" type="submit">Sign out</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}">Sign in</a>
+                    <a class="nav-action" href="{% url 'account-create' %}">Create account</a>
+                {% endif %}
+            </nav>
+        </header>
+        {% block content %}{% endblock %}
+        <footer class="footer">
+            <span>Signal Status</span>
+            <span>Service health, made visible.</span>
+        </footer>
+    </div>
+    <script src="{% static 'monitoring/site.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
