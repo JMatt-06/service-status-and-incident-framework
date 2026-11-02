@@ -1,8 +1,9 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
-from unittest.mock import patch
 
 from .models import HealthCheck, HealthCheckResult, Incident, Service, Subscription
 
@@ -127,9 +128,7 @@ class MonitoringModelTests(TestCase):
 
         self.client.login(username="owner", password="password")
         request_time = health_check.last_run_at
-        result = self.client.post(
-            reverse("health-check-run", args=[self.service.id])
-        )
+        result = self.client.post(reverse("health-check-run", args=[self.service.id]))
 
         self.assertRedirects(result, reverse("status"))
         stored_result = HealthCheckResult.objects.get(health_check=health_check)
