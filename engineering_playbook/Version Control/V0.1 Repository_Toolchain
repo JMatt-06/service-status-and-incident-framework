@@ -1,0 +1,43 @@
+Branch-per-feature, the branch may live for a week before it merges
+
+Definition of “DONE”:
+    Feature is implemented
+    Code follows the project’s coding standards
+    Unit tests have been written
+    All excision tests pass
+    Feature has been manually tested
+    No known critical bugs remain
+    Documentation has been updated if necessary
+    Code has been reviewed and approved
+    Changes have been merged into main
+
+Sprint Length = 2 weeks
+    Sprint Planning - Every 2 weeks to decide what work will be done
+    Meeting - 2 times per week to share progress/roadblocks
+    Review - Every 2 weeks to share completed work
+    Opinion - Every 2 weeks to share what went well/wrong
+    Backlog refinement - Once per week to prepare upcoming tasks
+
+Pull Requests:
+-> Developer
+-> Create feature branch
+-> Write Code + Tests
+-> Create Pull Requests
+-> Code Review
+-> Approved
+-> Merge into main
+
+Pull Request Rules:
+    Every change must be submitted through a pull request
+    The author may not approve their own PR unless reviewed by another team member
+    At least 1 other team member must approve a PR
+    All automated tests must pass before merging
+    Requested changes must be addressed before merging
+    If a review has no response for 24-48 hours, the author should either remind the reviewer or ask another team member to review it
+
+What the reviewer should check:
+    Does the code solve the intended problem?
+    Is the code readable?
+    Are there appropriate tests?
+    Could the change break existing functionality?
+    Does it follow the project’s coding standards?

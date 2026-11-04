@@ -1,0 +1,93 @@
+1. AI Tools and Approved Uses
+The team may use AI tools to assist with development, 
+    documentation, debugging, and code review. AI-generated 
+    work must still be reviewed and understood by a team 
+    member before being incorporated into the project.
+
+- Approved Tools -
+
+GitHub Copilot
+- may be used for
+    - Generating code suggestions
+    - Explaining existing code
+    - Suggesting tests
+    - Identifying bugs
+    - Reviewing code
+- Copilot suggestions must be reviewed by the developer
+    before being committed
+- The developer remains responsible for the correctness
+    of the resulting code
+
+ChatGPT
+- may be used for
+    - Generating code suggestions
+    - Explaining existing code
+    - Suggesting tests
+    - Identifying bugs
+    - Reviewing code
+- ChatGPT should not be the final authority on technical 
+    designs. A team member must verify that the tech Does
+    work and that the proposed solution fits the requirement
+
+GitHub
+- may be used for - 
+    - Source-code hosting
+    - Pull-requests and code review
+    - Tracking issues and project work
+    - Recording the team's development history
+- AI-generated code may be commited to the repository only
+    after the responsible team member has reviewed and 
+    approved that the code works 
+
+- Prohbited Uses -
+
+AI tools may not be used for
+- Submit work that a team member does not understand
+- Automatically merge code without the required review process
+- Generate or expose passwords, API keys, authentication tokens, 
+    or other secrets
+- Upload confidential credentials or sensitive project information 
+    to an AI service
+
+2. Promt-Log Policy
+The team will maintain a record of significant AI use so that the 
+    development process remains transparent and reproducible
+
+- What Gets Logged -
+For AI-assisted development, the team will record:
+- The date of the interaction
+- The AI tool used
+- The prompt or a representative copy of the prompt
+- A brief description of what the AI tool is being used for
+- Whether or not it was used, modified, or rejected
+
+Interactions used that have no meaningful or significant impact on 
+    the project do not need to be Logged
+
+- Where the Log Lives -
+The prompt log will be stored in "ai-prompt-log" or 
+    "/workspaces/engineering-playbook/ai-prompt-log"
+
+- Responsibilty - 
+The team member who used the AI tool is responsible for recording the
+    interaction. The person responsible for the related issue or pull
+    request is responsible for ensuring that significant AI use has been 
+    logged before the work in considered complete for the session
+
+Team members should update the prompt log as part of their normal 
+    development workflow rather than waiting until the end of the 
+    project
+
+3. AI-Assisted Code Review Policy
+AI-assisted code review does not satisfy the team's required rule of 
+    "one team-member must review and approve the pull-request"
+
+AI code review can provide useful additional feedback, but it can also
+    miss project-specific requirements, misunderstand the intended 
+    behavior, or identify issues that are not actually relevant to the project.
+    Therefore, an AI review is considered a supplemental review, while the
+    team-member's approval remains the formal requirement for merging a 
+    pull request.
+
+For routine changes, an AI review may speed up the process, but at least one
+    team-member must approve the pull request before it is merged.
