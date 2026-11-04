@@ -1,0 +1,117 @@
+# Engineering Playbook v0.3 – Code Quality Gates
+
+**Project:** Service Status and Incident Framework  
+**Version:** 0.3  
+**Technology Stack:** Python / Django  
+**Date:** October 21, 2026
+
+## 1. Purpose
+
+This version of the Engineering Playbook establishes enforceable code quality gates for our Python/Django application. These gates ensure that code is tested, formatted, checked for errors, and reviewed before being merged into the main branch.
+
+## 2. Code Quality Gates
+
+### Gate 1: Automated Testing
+
+- **Tool:** pytest and pytest-django
+- **Checks:** Application functionality, database operations, API endpoints, and expected behavior.
+- **Where it runs:** Locally and in GitHub Actions CI.
+- **Failure consequence:** Failed tests cause CI to fail and block merging into the main branch.
+
+### Gate 2: Code Linting
+
+- **Tool:** Ruff
+- **Checks:** Unused imports, undefined variables, and common Python coding errors.
+- **Where it runs:** Locally and in GitHub Actions CI.
+- **Failure consequence:** Linting errors cause CI to fail and block merging until corrected.
+
+### Gate 3: Code Formatting
+
+- **Tool:** Ruff Formatter
+- **Checks:** Consistent formatting and code style throughout the project.
+- **Where it runs:** Locally and in GitHub Actions CI.
+- **Failure consequence:** Formatting errors cause CI to fail and block merging until corrected.
+
+### Gate 4: Django System Checks
+
+- **Tool:** Django manage.py check
+- **Checks:** Django configuration, application settings, and model-related errors.
+- **Where it runs:** Locally and in GitHub Actions CI.
+- **Failure consequence:** System check failures cause CI to fail and block merging.
+
+### Gate 5: Database Migration Checks
+
+- **Tool:** Django makemigrations --check --dry-run
+- **Checks:** Ensures changes to Django models have corresponding database migration files.
+- **Where it runs:** Locally and in GitHub Actions CI.
+- **Failure consequence:** Missing migration files cause CI to fail and block merging.
+
+### Gate 6: Code Review
+
+- **Tool:** GitHub Pull Requests
+- **Checks:** Code correctness, readability, maintainability, and compliance with project requirements.
+- **Where it runs:** GitHub.
+- **Failure consequence:** Pull requests cannot be merged without at least one human approval.
+
+## 3. Continuous Integration Enforcement
+
+The team will use GitHub Actions to automatically run quality checks whenever code is pushed or a pull request is opened.
+
+The following commands will be used:
+
+**Automated Testing**
+```bash
+python -m pytest
+```
+
+**Code Linting**
+```bash
+ruff check .
+```
+
+**Code Formatting**
+```bash
+ruff format --check .
+```
+
+**Django System Checks**
+```bash
+python manage.py check
+```
+
+**Database Migration Checks**
+```bash
+python manage.py makemigrations --check --dry-run
+```
+
+If any automated check fails, GitHub Actions will report a failed workflow. The developer must fix the issue before the code can be merged.
+
+The main branch will be protected using GitHub branch protection rules requiring successful CI checks and at least one human approval.
+
+AI-assisted code reviews may support the review process but will not replace human approval.
+
+## 4. Code Coverage Policy
+
+The team will use **pytest-cov** to generate code coverage reports.
+
+Coverage reports can be generated using:
+
+```bash
+python -m pytest --cov=. --cov-report=term-missing
+```
+
+No numeric minimum coverage requirement will be established in version 0.3.
+
+The coverage floor is explicitly deferred to Amendment 1 at Session 15
+
+At Session 15, the team will review an actual coverage report from the application and establish a realistic minimum coverage percentage.
+
+Until Amendment 1, coverage reports will be used to identify areas needing additional tests, but no numeric coverage threshold will block merging.
+
+## 5. Team Responsibilities
+
+- Developers must run quality checks locally before submitting pull requests.
+- All pull requests must pass automated CI checks.
+- At least one team member must review and approve changes.
+- Developers must correct failed quality checks before merging.
+- Code cannot be merged into the main branch until all required gates pass.
