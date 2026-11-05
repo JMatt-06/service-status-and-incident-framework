@@ -1,0 +1,95 @@
+# Engineering Playbook v0.3 Amendment 1 - Sprint 1
+
+**Base document:** `V0.3 Quality_Gates`
+**Amendment date:** November 5, 2026
+**Status:** Effective for the remainder of the semester
+
+This amendment records the Sprint 1 changes to v0.3. The fenced block is the
+diff against v0.3; each hunk is followed by its rationale.
+
+## Diff Against v0.3
+
+```diff
+--- V0.3 Quality_Gates
++++ V0.3 Quality_Gates (Amendment 1)
+@@
+-**Version:** 0.3
+-**Date:** October 21, 2026
+
++**Version:** 0.3.1 (Amendment 1)
++**Date:** November 5, 2026
+
+@@ Gate 1: Automated Testing
+-**Failure consequence:** Failed tests cause CI to fail and block merging into the main branch.
++**Discovery requirement:** The repository must contain an explicit pytest discovery configuration (`pytest.ini`, `pyproject.toml`, or equivalent), and CI must report a non-zero number of collected tests. A run that collects zero tests fails the gate.
++**Failure consequence:** Failed tests or zero collected tests cause CI to fail and block merging into the main branch.
+
+@@ Gate 3: Code Formatting
+-**Failure consequence:** Formatting errors cause CI to fail and block merging until corrected.
++**Developer check:** Before opening a pull request, the author runs `ruff check .` and `ruff format --check .` and fixes all reported findings.
++**Failure consequence:** Formatting or lint errors cause CI to fail and block merging until corrected.
+
+@@ Code Coverage Policy
+-No numeric minimum coverage requirement will be established in version 0.3.
+-The coverage floor is explicitly deferred to Amendment 1 at Session 15
+-At Session 15, the team will review an actual coverage report from the application and establish a realistic minimum coverage percentage.
+-Until Amendment 1, coverage reports will be used to identify areas needing additional tests, but no numeric coverage threshold will block merging.
++The coverage floor is **80%** for the production monitoring domain layer: `monitoring/admin.py`, `monitoring/apps.py`, `monitoring/forms.py`, `monitoring/models.py`, `monitoring/permissions.py`, `monitoring/urls.py`, and `monitoring/views.py`. The floor applies to these files only; it excludes `monitoring/tests.py` and `monitoring/migrations/` and is not a whole-repository coverage commitment.
++
++The required command is:
++
++```bash
++python -m pytest \
++  --cov=monitoring.admin \
++  --cov=monitoring.apps \
++  --cov=monitoring.forms \
++  --cov=monitoring.models \
++  --cov=monitoring.permissions \
++  --cov=monitoring.urls \
++  --cov=monitoring.views \
++  --cov-report=term-missing \
++  --cov-fail-under=80
++```
++
++A report from Sprint 1 ran 14 tests, all of which passed. Its production monitoring rows contained 270 statements and 40 missed statements, or 85% coverage. An 80% floor leaves a five-point operating margin while requiring the team to improve the least-covered view and form paths rather than counting test and migration files.
++
++The coverage threshold is a merge-blocking CI gate. A pull request below 80% must add or revise tests, or document an approved exception in the pull request before merging.
+```
+
+## Rationale For Each Change
+
+### Version and date
+
+This identifies the document as an amendment rather than silently rewriting
+the v0.3 baseline. The threshold was deferred by v0.3 until the real report
+was available; Sprint 1 supplied that report on November 5.
+
+### Test discovery requirement
+
+The named incident is the **Project Structure CI Discovery Incident** (GitHub
+Actions run for `Initial Frontend Development`, October 29, 2026). CI ran the
+v0.3 test command, collected **0 items**, and failed with exit code 5. v0.3
+said that pytest failures block merging, but it did not say that zero
+collected tests is itself a failure or require a discovery configuration. That
+was the wrong answer because the gate could not distinguish “the suite passed”
+from “the suite never ran.” The amendment makes that distinction explicit.
+
+### Pre-PR lint and formatting check
+
+The named incident is the **Health Check, Timestamp, Service Status Ruff
+Incident** (GitHub Actions run for that change, November 2, 2026). The PR
+reached CI and `ruff check .` failed, requiring a follow-up lint repair. v0.3
+listed linting and formatting as CI gates, but gave the author no required
+local pre-PR check. That was the wrong answer because a cheap deterministic
+check was deferred until after review and CI time had already been spent. The
+amendment makes the same commands an author responsibility before review.
+
+### 80% production-domain coverage floor
+
+The report measured 85% across the named production monitoring modules (270
+statements, 40 missed, 14 tests passing). The floor is intentionally 80%, not
+85%: it is a five-point buffer against normal semester changes while still
+requiring meaningful coverage of the domain layer. It is a numeric,
+merge-blocking floor for the named production monitoring files, not a promise
+about the whole repository. Tests and migrations are excluded so they cannot
+inflate the commitment.
