@@ -34,8 +34,7 @@ def status_page(request):
             "can_register_service": is_service_owner(request.user),
             "can_manage_incidents": is_service_owner(request.user),
             "is_subscriber": (
-                request.user.is_authenticated
-                and not is_service_owner(request.user)
+                request.user.is_authenticated and not is_service_owner(request.user)
             ),
         },
     )

@@ -53,9 +53,9 @@ class IncidentForm(forms.ModelForm):
                 services = services.filter(owner=user)
             self.fields["affected_services"].queryset = services
         self.fields["affected_services"].required = True
-        self.fields["affected_services"].help_text = (
-            "Select at least one affected service."
-        )
+        self.fields[
+            "affected_services"
+        ].help_text = "Select at least one affected service."
 
     def clean(self):
         cleaned_data = super().clean()

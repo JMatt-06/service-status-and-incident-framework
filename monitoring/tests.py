@@ -88,9 +88,7 @@ class MonitoringModelTests(TestCase):
 
         self.assertRedirects(response, reverse("status"))
         subscriber = User.objects.get(username="subscriber")
-        self.assertFalse(
-            subscriber.groups.filter(name="Service Owners").exists()
-        )
+        self.assertFalse(subscriber.groups.filter(name="Service Owners").exists())
         status_response = self.client.get(reverse("status"))
         self.assertContains(status_response, "Subscriber")
         self.assertContains(status_response, "Subscribe to updates")
