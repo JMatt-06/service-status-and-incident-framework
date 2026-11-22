@@ -77,7 +77,7 @@
                     {% endif %}
                     </div>
                 {% endif %}
-                {% if user.is_authenticated %}
+                {% if is_subscriber %}
                     <form method="post" action="{% url 'subscribe' service.id %}">
                         {% csrf_token %}
                         <button class="text-link" type="submit">Subscribe to updates</button>
@@ -92,7 +92,12 @@
             <a class="management-link" href="{% url 'service-create' %}">Register a service</a>
         {% endif %}
         <section class="incidents" aria-labelledby="incidents-heading">
-            <div class="section-heading"><h2 id="incidents-heading">Active incidents</h2></div>
+            <div class="section-heading">
+                <h2 id="incidents-heading">Active incidents</h2>
+                {% if can_manage_incidents %}
+                    <a class="management-link" href="{% url 'incident-create' %}">Create incident</a>
+                {% endif %}
+            </div>
             <div class="incident-list">
                 {% for incident in active_incidents %}
                     <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>

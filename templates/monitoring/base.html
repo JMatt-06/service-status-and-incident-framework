@@ -20,6 +20,11 @@
                 <a href="{% url 'status' %}">Overview</a>
                 {% if user.is_authenticated %}
                     <span class="signed-in">{{ user.username }}</span>
+                    {% if user.is_superuser or can_register_service %}
+                        <span class="role-badge admin-badge">Admin</span>
+                    {% else %}
+                        <span class="role-badge subscriber-badge">Subscriber</span>
+                    {% endif %}
                     <form class="nav-form" method="post" action="{% url 'logout' %}">
                         {% csrf_token %}
                         <button class="nav-action" type="submit">Sign out</button>

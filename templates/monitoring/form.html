@@ -11,6 +11,12 @@
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
+            {% if not has_selectable_services %}
+                <p class="form-empty-state">
+                    No affected services are available. Register a service before creating an incident.
+                </p>
+                <a class="management-link" href="{% url 'service-create' %}">Register a service</a>
+            {% endif %}
             <button class="button form-submit" type="submit">Save changes</button>
         </form>
             <a class="form-back" href="{% url 'status' %}">Back to overview</a>

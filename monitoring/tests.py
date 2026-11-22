@@ -47,6 +47,7 @@ class MonitoringModelTests(TestCase):
                 "username": "new-owner",
                 "password1": "a-strong-password-123",
                 "password2": "a-strong-password-123",
+                "account_type": "admin",
             },
         )
         self.assertRedirects(response, reverse("status"))
@@ -68,10 +69,31 @@ class MonitoringModelTests(TestCase):
                 "username": "new-user",
                 "password1": "a-strong-password-123",
                 "password2": "a-different-password-456",
+                "account_type": "subscriber",
             },
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(username="new-user").exists())
+
+    def test_visitor_can_create_subscriber_account(self):
+        response = self.client.post(
+            reverse("account-create"),
+            {
+                "username": "subscriber",
+                "password1": "a-strong-password-123",
+                "password2": "a-strong-password-123",
+                "account_type": "subscriber",
+            },
+        )
+
+        self.assertRedirects(response, reverse("status"))
+        subscriber = User.objects.get(username="subscriber")
+        self.assertFalse(
+            subscriber.groups.filter(name="Service Owners").exists()
+        )
+        status_response = self.client.get(reverse("status"))
+        self.assertContains(status_response, "Subscriber")
+        self.assertContains(status_response, "Subscribe to updates")
 
     def test_service_owner_can_configure_health_check(self):
         self.client.login(username="owner", password="password")
@@ -235,3 +257,82 @@ class MonitoringModelTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             incident.full_clean()
+
+    def test_owner_can_create_incident_for_owned_service(self):
+        self.client.login(username="owner", password="password")
+        response = self.client.post(
+            reverse("incident-create"),
+            {
+                "title": "API outage",
+                "description": "The API is returning errors.",
+                "status": Incident.Status.INVESTIGATING,
+                "post_mortem_summary": "",
+                "affected_services": [self.service.id],
+            },
+        )
+
+        self.assertRedirects(response, reverse("status"))
+        incident = Incident.objects.get(title="API outage")
+        self.assertEqual(incident.created_by, self.owner)
+        self.assertEqual(incident.status, Incident.Status.INVESTIGATING)
+        self.assertEqual(list(incident.affected_services.all()), [self.service])
+
+    def test_owner_cannot_create_incident_for_another_owned_service(self):
+        other_owner = User.objects.create_user(
+            username="other-owner", password="password"
+        )
+        other_owner.groups.add(Group.objects.get(name="Service Owners"))
+        other_service = Service.objects.create(
+            name="Other API", slug="other-api", owner=other_owner
+        )
+
+        self.client.login(username="owner", password="password")
+        response = self.client.post(
+            reverse("incident-create"),
+            {
+                "title": "Unauthorized incident",
+                "description": "This service is not owned by the requester.",
+                "status": Incident.Status.OPEN,
+                "post_mortem_summary": "",
+                "affected_services": [other_service.id],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            Incident.objects.filter(title="Unauthorized incident").exists()
+        )
+
+    def test_regular_user_cannot_create_incident(self):
+        self.client.login(username="user", password="password")
+        response = self.client.post(
+            reverse("incident-create"),
+            {
+                "title": "Unauthorized incident",
+                "description": "A regular user cannot do this.",
+                "status": Incident.Status.OPEN,
+                "post_mortem_summary": "",
+                "affected_services": [self.service.id],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            Incident.objects.filter(title="Unauthorized incident").exists()
+        )
+
+    def test_incident_requires_an_affected_service(self):
+        self.client.login(username="owner", password="password")
+        response = self.client.post(
+            reverse("incident-create"),
+            {
+                "title": "Missing service",
+                "description": "No affected service was selected.",
+                "status": Incident.Status.OPEN,
+                "post_mortem_summary": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select at least one affected service.")
+        self.assertFalse(Incident.objects.filter(title="Missing service").exists())
