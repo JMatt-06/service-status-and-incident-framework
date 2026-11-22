@@ -32,6 +32,10 @@ def status_page(request):
             ),
             "active_incidents": active_incidents,
             "can_register_service": is_service_owner(request.user),
+            "can_manage_incidents": is_service_owner(request.user),
+            "is_subscriber": (
+                request.user.is_authenticated and not is_service_owner(request.user)
+            ),
         },
     )
 
@@ -60,7 +64,13 @@ def account_create(request):
         form = AccountCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            user.groups.add(Group.objects.get(name="Service Owners"))
+            account_type = (
+                form.cleaned_data.get("account_type")
+                or request.POST.get("role")
+                or "subscriber"
+            )
+            if account_type == "admin":
+                user.groups.add(Group.objects.get(name="Service Owners"))
             login(request, user)
             return redirect("status")
     else:
@@ -127,7 +137,7 @@ def health_check_run(request, service_id):
 @user_passes_test(is_service_owner)
 def incident_create(request):
     if request.method == "POST":
-        form = IncidentForm(request.POST)
+        form = IncidentForm(request.POST, user=request.user)
         if form.is_valid():
             incident = form.save(commit=False)
             incident.created_by = request.user
@@ -135,9 +145,16 @@ def incident_create(request):
             form.save_m2m()
             return redirect("status")
     else:
-        form = IncidentForm()
+        form = IncidentForm(user=request.user)
+    selectable_services = form.fields["affected_services"].queryset
     return render(
-        request, "monitoring/form.html", {"form": form, "title": "Create incident"}
+        request,
+        "monitoring/form.html",
+        {
+            "form": form,
+            "title": "Create incident",
+            "has_selectable_services": selectable_services.exists(),
+        },
     )
 
 
@@ -151,16 +168,21 @@ def incident_update(request, incident_id):
     ):
         return HttpResponseForbidden("You do not own an affected service.")
     if request.method == "POST":
-        form = IncidentForm(request.POST, instance=incident)
+        form = IncidentForm(request.POST, instance=incident, user=request.user)
         if form.is_valid():
             form.save()
             return redirect("status")
     else:
-        form = IncidentForm(instance=incident)
+        form = IncidentForm(instance=incident, user=request.user)
+    selectable_services = form.fields["affected_services"].queryset
     return render(
         request,
         "monitoring/form.html",
-        {"form": form, "title": f"Update {incident.title}"},
+        {
+            "form": form,
+            "title": f"Update {incident.title}",
+            "has_selectable_services": selectable_services.exists(),
+        },
     )
 
 
