@@ -100,7 +100,15 @@
             </div>
             <div class="incident-list">
                 {% for incident in active_incidents %}
-                    <article><h3>{{ incident.title }}</h3><p>{{ incident.get_status_display }}: {{ incident.description }}</p></article>
+                    <article>
+                        <h3>{{ incident.title }}</h3>
+                        <p>{{ incident.get_status_display }}: {{ incident.description }}</p>
+                        {% if can_manage_incidents %}
+                            <div class="card-actions">
+                                <a class="text-link" href="{% url 'incident-update' incident.id %}">Update incident</a>
+                            </div>
+                        {% endif %}
+                    </article>
                 {% empty %}
                     <p>No active incidents.</p>
                 {% endfor %}

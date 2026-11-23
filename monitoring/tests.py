@@ -256,6 +256,41 @@ class MonitoringModelTests(TestCase):
         with self.assertRaises(ValidationError):
             incident.full_clean()
 
+    def test_incident_lifecycle_requires_each_transition(self):
+        incident = Incident.objects.create(
+            title="Lifecycle",
+            description="Testing lifecycle",
+            status=Incident.Status.OPEN,
+            created_by=self.owner,
+        )
+        incident.transition_to(Incident.Status.INVESTIGATING)
+        incident.save()
+        incident.refresh_from_db()
+        self.assertEqual(incident.status, Incident.Status.INVESTIGATING)
+
+        incident.transition_to(Incident.Status.RESOLVED)
+        incident.save()
+        incident.refresh_from_db()
+        self.assertEqual(incident.status, Incident.Status.RESOLVED)
+        self.assertIsNotNone(incident.resolved_at)
+
+        incident.post_mortem_summary = "The issue was corrected."
+        incident.transition_to(Incident.Status.CLOSED)
+        incident.save()
+        incident.refresh_from_db()
+        self.assertEqual(incident.status, Incident.Status.CLOSED)
+        self.assertIsNotNone(incident.closed_at)
+
+    def test_incident_cannot_skip_lifecycle_statuses(self):
+        incident = Incident.objects.create(
+            title="Skipped",
+            description="Testing invalid transition",
+            status=Incident.Status.OPEN,
+            created_by=self.owner,
+        )
+        with self.assertRaises(ValidationError):
+            incident.transition_to(Incident.Status.RESOLVED)
+
     def test_owner_can_create_incident_for_owned_service(self):
         self.client.login(username="owner", password="password")
         response = self.client.post(
