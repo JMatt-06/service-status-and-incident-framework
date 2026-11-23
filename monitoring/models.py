@@ -38,6 +38,20 @@ class Service(models.Model):
     def update_status_from_health_check(self, result):
         if result.succeeded:
             self.status = self.Status.OPERATIONAL
+            active_health_check_incidents = self.incidents.filter(
+                detection_source=Incident.DetectionSource.HEALTH_CHECK,
+                health_check=self.health_check,
+                status__in=[
+                    Incident.Status.OPEN,
+                    Incident.Status.INVESTIGATING,
+                ],
+            )
+            for incident in active_health_check_incidents:
+                if incident.status == Incident.Status.OPEN:
+                    incident.transition_to(Incident.Status.INVESTIGATING)
+                    incident.save(update_fields=["status"])
+                incident.transition_to(Incident.Status.RESOLVED)
+                incident.save(update_fields=["status", "resolved_at"])
         else:
             consecutive_failures = 0
             for previous_result in self.health_check.results.all():
@@ -52,6 +66,27 @@ class Service(models.Model):
                 if consecutive_failures >= self.health_check.failure_threshold
                 else self.Status.DEGRADED
             )
+            active_incident_exists = self.incidents.filter(
+                detection_source=Incident.DetectionSource.HEALTH_CHECK,
+                health_check=self.health_check,
+            ).exclude(status__in=[
+                Incident.Status.RESOLVED,
+                Incident.Status.CLOSED,
+            ]).exists()
+            if not active_incident_exists:
+                incident = Incident.objects.create(
+                    title=f"{self.name} health check failed",
+                    description=(
+                        "This incident was created automatically after a health "
+                        f"check failed for {self.name}. "
+                        f"Error: {result.error_message or 'Health check failed'}"
+                    ),
+                    status=Incident.Status.OPEN,
+                    created_by=self.owner,
+                    detection_source=Incident.DetectionSource.HEALTH_CHECK,
+                    health_check=self.health_check,
+                )
+                incident.affected_services.add(self)
         self.save(update_fields=["status", "updated_at"])
 
 
@@ -112,6 +147,10 @@ class HealthCheckResult(models.Model):
 
 
 class Incident(models.Model):
+    class DetectionSource(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        HEALTH_CHECK = "health_check", "Health check"
+
     class Status(models.TextChoices):
         OPEN = "open", "Open"
         INVESTIGATING = "investigating", "Investigating"
@@ -131,6 +170,18 @@ class Incident(models.Model):
         max_length=20, choices=Status.choices, default=Status.OPEN
     )
     post_mortem_summary = models.TextField(blank=True)
+    detection_source = models.CharField(
+        max_length=20,
+        choices=DetectionSource.choices,
+        default=DetectionSource.MANUAL,
+    )
+    health_check = models.ForeignKey(
+        "HealthCheck",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="incidents",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

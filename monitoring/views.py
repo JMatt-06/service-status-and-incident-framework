@@ -19,6 +19,13 @@ def status_page(request):
         status=Incident.Status.CLOSED
     ).prefetch_related("affected_services")
     recent_results = HealthCheckResult.objects.order_by("-checked_at")[:1]
+    subscribed_service_ids = (
+        Subscription.objects.filter(user=request.user).values_list(
+            "service_id", flat=True
+        )
+        if request.user.is_authenticated
+        else []
+    )
     return render(
         request,
         "monitoring/status.html",
@@ -33,9 +40,7 @@ def status_page(request):
             "active_incidents": active_incidents,
             "can_register_service": is_service_owner(request.user),
             "can_manage_incidents": is_service_owner(request.user),
-            "is_subscriber": (
-                request.user.is_authenticated and not is_service_owner(request.user)
-            ),
+            "subscribed_service_ids": subscribed_service_ids,
         },
     )
 

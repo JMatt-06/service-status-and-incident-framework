@@ -77,11 +77,18 @@
                     {% endif %}
                     </div>
                 {% endif %}
-                {% if is_subscriber %}
-                    <form method="post" action="{% url 'subscribe' service.id %}">
-                        {% csrf_token %}
-                        <button class="text-link" type="submit">Subscribe to updates</button>
-                    </form>
+                {% if user.is_authenticated %}
+                    {% if service.id in subscribed_service_ids %}
+                        <form method="post" action="{% url 'unsubscribe' service.id %}">
+                            {% csrf_token %}
+                            <button class="text-link" type="submit">Unsubscribe from updates</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'subscribe' service.id %}">
+                            {% csrf_token %}
+                            <button class="text-link" type="submit">Subscribe to updates</button>
+                        </form>
+                    {% endif %}
                 {% endif %}
             </article>
         {% empty %}
