@@ -47,6 +47,14 @@ class HealthCheckForm(forms.ModelForm):
 class IncidentForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            status = self.instance.status
+            allowed_statuses = (status,) + Incident.STATUS_TRANSITIONS.get(status, ())
+            self.fields["status"].choices = [
+                choice
+                for choice in Incident.Status.choices
+                if choice[0] in allowed_statuses
+            ]
         if user is not None:
             services = Service.objects.all()
             if not user.is_superuser:

@@ -6,6 +6,7 @@ from typing import ClassVar
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class Service(models.Model):
@@ -117,6 +118,13 @@ class Incident(models.Model):
         RESOLVED = "resolved", "Resolved"
         CLOSED = "closed", "Closed"
 
+    STATUS_TRANSITIONS: ClassVar[dict[str, tuple[str, ...]]] = {
+        Status.OPEN: (Status.INVESTIGATING,),
+        Status.INVESTIGATING: (Status.RESOLVED,),
+        Status.RESOLVED: (Status.CLOSED,),
+        Status.CLOSED: (),
+    }
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(
@@ -131,14 +139,78 @@ class Incident(models.Model):
     affected_services = models.ManyToManyField(Service, related_name="incidents")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    def transition_to(self, new_status):
+        if new_status not in self.Status.values:
+            raise ValidationError({"status": "Invalid incident status."})
+        if new_status == self.status:
+            return
+        if new_status not in self.STATUS_TRANSITIONS.get(self.status, ()):
+            raise ValidationError(
+                {
+                    "status": (
+                        f"Incidents cannot move directly from "
+                        f"{self.get_status_display()} to "
+                        f"{self.Status(new_status).label}."
+                    )
+                }
+            )
+        if new_status == self.Status.CLOSED and not self.post_mortem_summary.strip():
+            raise ValidationError(
+                {
+                    "post_mortem_summary": (
+                        "A post-mortem summary is required to close an incident."
+                    )
+                }
+            )
+        self.status = new_status
+        if new_status == self.Status.RESOLVED:
+            self.resolved_at = timezone.now()
+        elif new_status == self.Status.CLOSED:
+            self.closed_at = timezone.now()
 
     def clean(self):
+        if self.pk:
+            previous_status = type(self).objects.only("status").get(pk=self.pk).status
+            if previous_status != self.status:
+                previous_status_label = self.Status(previous_status).label
+                next_status_label = self.Status(self.status).label
+                if self.status not in self.STATUS_TRANSITIONS.get(previous_status, ()):
+                    raise ValidationError(
+                        {
+                            "status": (
+                                "Incidents cannot move directly from "
+                                f"{previous_status_label} to {next_status_label}."
+                            )
+                        }
+                    )
         if self.status == self.Status.CLOSED and not self.post_mortem_summary.strip():
             raise ValidationError(
                 {
                     "post_mortem_summary": "A post-mortem summary is required to close an incident."
                 }
             )
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields = set(update_fields)
+            update_fields.add("updated_at")
+            kwargs["update_fields"] = update_fields
+
+        if self.pk:
+            previous = type(self).objects.only("status").filter(pk=self.pk).first()
+            if previous is not None and previous.status != self.status:
+                new_status = self.status
+                self.status = previous.status
+                self.transition_to(new_status)
+                if kwargs.get("update_fields") is not None:
+                    kwargs["update_fields"].update(
+                        {"status", "resolved_at", "closed_at"}
+                    )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
