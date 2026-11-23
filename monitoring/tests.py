@@ -241,10 +241,64 @@ class MonitoringModelTests(TestCase):
         self.assertTrue(
             Subscription.objects.filter(user=self.owner, service=self.service).exists()
         )
+        status_response = self.client.get(reverse("status"))
+        self.assertContains(status_response, "Unsubscribe from updates")
         self.client.post(reverse("unsubscribe", args=[self.service.id]))
         self.assertFalse(
             Subscription.objects.filter(user=self.owner, service=self.service).exists()
         )
+        status_response = self.client.get(reverse("status"))
+        self.assertContains(status_response, "Subscribe to updates")
+
+    @patch("monitoring.models.urllib.request.urlopen")
+    def test_failed_health_check_creates_and_reuses_automatic_incident(self, urlopen):
+        urlopen.side_effect = TimeoutError("health check timed out")
+        health_check = HealthCheck.objects.create(
+            service=self.service,
+            url="https://api.example.com/health",
+            failure_threshold=3,
+        )
+
+        health_check.run()
+        health_check.run()
+
+        incidents = Incident.objects.filter(
+            detection_source=Incident.DetectionSource.HEALTH_CHECK,
+            health_check=health_check,
+        )
+        self.assertEqual(incidents.count(), 1)
+        incident = incidents.get()
+        self.assertEqual(incident.created_by, self.owner)
+        self.assertEqual(incident.status, Incident.Status.OPEN)
+        self.assertIn(self.service, incident.affected_services.all())
+        self.assertIn("health check failed", incident.description)
+
+    @patch("monitoring.models.urllib.request.urlopen")
+    def test_recovered_health_check_resolves_automatic_incident(self, urlopen):
+        health_check = HealthCheck.objects.create(
+            service=self.service,
+            url="https://api.example.com/health",
+        )
+        urlopen.side_effect = [
+            TimeoutError("health check timed out"),
+            None,
+        ]
+
+        with patch("monitoring.models.urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = TimeoutError("health check timed out")
+            health_check.run()
+
+            response = mock_urlopen.return_value.__enter__.return_value
+            response.status = 200
+            mock_urlopen.side_effect = None
+            health_check.run()
+
+        incident = Incident.objects.get(
+            detection_source=Incident.DetectionSource.HEALTH_CHECK,
+            health_check=health_check,
+        )
+        self.assertEqual(incident.status, Incident.Status.RESOLVED)
+        self.assertIsNotNone(incident.resolved_at)
 
     def test_closed_incident_requires_post_mortem(self):
         incident = Incident(
