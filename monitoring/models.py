@@ -66,13 +66,19 @@ class Service(models.Model):
                 if consecutive_failures >= self.health_check.failure_threshold
                 else self.Status.DEGRADED
             )
-            active_incident_exists = self.incidents.filter(
-                detection_source=Incident.DetectionSource.HEALTH_CHECK,
-                health_check=self.health_check,
-            ).exclude(status__in=[
-                Incident.Status.RESOLVED,
-                Incident.Status.CLOSED,
-            ]).exists()
+            active_incident_exists = (
+                self.incidents.filter(
+                    detection_source=Incident.DetectionSource.HEALTH_CHECK,
+                    health_check=self.health_check,
+                )
+                .exclude(
+                    status__in=[
+                        Incident.Status.RESOLVED,
+                        Incident.Status.CLOSED,
+                    ]
+                )
+                .exists()
+            )
             if not active_incident_exists:
                 incident = Incident.objects.create(
                     title=f"{self.name} health check failed",

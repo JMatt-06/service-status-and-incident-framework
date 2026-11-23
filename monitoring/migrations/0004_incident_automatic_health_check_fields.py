@@ -1,13 +1,15 @@
-from django.db import migrations, models
+from typing import ClassVar
+
 import django.db.models.deletion
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [
+    dependencies: ClassVar[list[tuple[str, str]]] = [
         ("monitoring", "0003_incident_lifecycle"),
     ]
 
-    operations = [
+    operations: ClassVar[list] = [
         migrations.AddField(
             model_name="incident",
             name="detection_source",
